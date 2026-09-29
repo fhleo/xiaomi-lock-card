@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>xiaomi-lock-card · 语法检查</title>
+<style>
+ body{margin:0;padding:28px;background:#0a0e13;color:#c9d5e0;
+      font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.7}
+ h1{font-size:14px;color:#00e5ff;letter-spacing:.12em;margin:0 0 18px}
+ .ok{color:#39d353}.bad{color:#ff5f56}.dim{color:#7a8896}
+ pre{white-space:pre-wrap;word-break:break-word;background:#111820;
+     border:1px solid #1e2733;border-radius:8px;padding:12px}
+</style></head>
+<body>
+<h1>Syntax Check</h1>
+<div id="out" class="dim">loading…</div>
+<pre id="log"></pre>
+<script>
+(async () => {
+  const out = document.getElementById('out'), log = document.getElementById('log');
+  try {
+    const txt = await (await fetch('./src/xiaomi-lock-card.js')).text();
+    let ok = false, err = '';
+    try { new Function(txt); ok = true; }
+    catch(e){ err = e.message; }
+    out.className = ok ? 'ok' : 'bad';
+    out.textContent = (ok ? '✔ SYNTAX OK' : '✘ SYNTAX ERROR') + '  size=' + txt.length;
+    if(err){
+      // 定位行列
+      log.textContent = err;
+    } else {
+      // 顺带做静态结构自检
+      const lines = txt.split('\n');
+      const has = k => lines.some(l => l.includes(k));
+      const checks = [
+        ['ED_SECTIONS 定义',        has('const ED_SECTIONS')],
+        ['ED_ALL 定义',             has('const ED_ALL')],
+        ['ED_CSS 定义',             has('const ED_CSS')],
+        ['_edToYaml 定义',          has('function _edToYaml')],
+        ['编辑器类',                 has('class XiaomiLockCardEditor')],
+        ['旧 _buildSchema 已删',     !has('_buildSchema')],
+        ['旧 ha-form 已删',         !has('ha-form')],
+        ['旧 LABEL 表已删',          !has('const LABEL')],
+        ['_render',                 has('  _render(){')],
+        ['_rebuild',                has('  _rebuild(emit){')],
+        ['_emitConfig',             has('  _emitConfig(){')],
+        ['config-changed 事件',      has("config-changed")],
+        ['卡片类',                   has('class XiaomiLockCard')],
+        ['注册 xiaomi-lock-card', has("customElements.define('xiaomi-lock-card'")],
+        ['注册 editor',              has("customElements.define('xiaomi-lock-card-editor'")]
+      ];
+      log.textContent = checks.map(([n,v]) => (v?'✔ ':'✘ ') + n).join('\n');
+    }
+    document.title = ok ? 'OK' : 'FAIL';
+  } catch(e){
+    out.className='bad'; out.textContent='✘ FETCH/PARSE ERROR';
+    log.textContent = String(e && e.stack || e);
+    document.title = 'FAIL';
+  }
+})();
+</script>
+</body></html>

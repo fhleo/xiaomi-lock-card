@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xiaomi-lock-card · 配置面板预览</title>
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0 }
+  html,body{ min-height:100% }
+  body{
+    font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(0,229,255,.07), transparent 60%),
+      radial-gradient(700px 500px at 90% 110%, rgba(77,124,255,.09), transparent 60%),
+      #06090d;
+    color:#e6edf3; padding:34px 18px 70px;
+  }
+  .head{ text-align:center; margin-bottom:26px }
+  .head h1{ font-size:16px; font-weight:650; letter-spacing:.16em; text-transform:uppercase;
+            color:#8b98a5; display:flex; align-items:center; justify-content:center; gap:14px }
+  .head h1::before,.head h1::after{ content:""; width:64px; height:1px;
+            background:linear-gradient(90deg,transparent,rgba(0,229,255,.28)) }
+  .head h1::after{ background:linear-gradient(270deg,transparent,rgba(0,229,255,.28)) }
+  .head p{ margin-top:9px; font-size:12.5px; color:#7a8896 }
+  .head code{ color:#00e5ff; font-family:ui-monospace,Consolas,monospace }
+
+  .grid{ display:flex; gap:24px; flex-wrap:wrap; justify-content:center;
+         align-items:flex-start; max-width:1320px; margin:0 auto }
+  .col{ flex:1 1 440px; max-width:540px }
+  .tag{ display:inline-flex; align-items:center; gap:7px; margin-bottom:11px;
+        font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+        padding:4px 12px; border-radius:99px; font-weight:650 }
+  .tag.dark{ color:#00e5ff; border:1px solid rgba(0,229,255,.35); background:rgba(0,229,255,.08) }
+  .tag.light{ color:#ffd166; border:1px solid rgba(255,209,102,.35); background:rgba(255,209,102,.08) }
+
+  /* 模拟 HA 卡片编辑器容器 */
+  .stage{ border-radius:16px; padding:16px; box-shadow:0 14px 46px rgba(0,0,0,.5) }
+  .stage.dark{
+    --ha-card-background:#10161d;
+    --primary-text-color:#e6edf3;
+    --secondary-text-color:#93a1b0;
+    --divider-color:rgba(255,255,255,.09);
+    --primary-color:#00e5ff;
+    --error-color:#ff5f56;
+    background:#0b1118;
+  }
+  .stage.light{
+    --ha-card-background:#ffffff;
+    --primary-text-color:#1a1d21;
+    --secondary-text-color:#6b7280;
+    --divider-color:rgba(0,0,0,.11);
+    --primary-color:#0284c7;
+    --error-color:#dc2626;
+    background:#f2f4f7;
+  }
+
+  .legend{ margin-top:22px; max-width:900px; margin-inline:auto;
+           background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+           border-radius:14px; padding:16px 20px }
+  .legend h2{ font-size:12.5px; letter-spacing:.1em; color:#00e5ff; margin-bottom:11px;
+              text-transform:uppercase }
+  .legend ul{ list-style:none; display:grid; gap:8px;
+              grid-template-columns:repeat(auto-fit,minmax(280px,1fr)) }
+  .legend li{ font-size:12.5px; color:#b6c2cf; line-height:1.6; padding-left:18px; position:relative }
+  .legend li::before{ content:"▪"; position:absolute; left:0; color:#00e5ff }
+  .legend b{ color:#e6edf3; font-weight:650 }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>配置面板 · 新版</h1>
+  <p>真实渲染自 <code>src/xiaomi-lock-card.js</code>，非静态图。点分段按钮 / 步进器 / 实体选择器可直接交互。</p>
+</div>
+
+<div class="grid">
+  <div class="col">
+    <span class="tag dark">● 深色 · 科技风</span>
+    <div class="stage dark" id="stage-dark"></div>
+  </div>
+  <div class="col">
+    <span class="tag light">● 浅色</span>
+    <div class="stage light" id="stage-light"></div>
+  </div>
+</div>
+
+<div class="legend">
+  <h2>相对旧版（ha-form）的变化</h2>
+  <ul>
+    <li><b>自绘 Shadow DOM 分区卡片</b>，不再是 HA 默认的挤在一起的 grid/expandable</li>
+    <li><b>只改用户碰过的字段</b>：打开编辑器 0 改动、0 事件，未动的 YAML 逐字保留</li>
+    <li><b>实时 YAML 预览</b>：底部区块与配置同步刷新，UI ⇄ YAML 是否一致一眼可见</li>
+    <li><b>等于默认值的键自动删除</b>，YAML 里不会堆满 <code>days: 2</code> 这类噪音</li>
+    <li><b>必填校验不覆盖</b>：日志实体为空时横幅提示、不发 config-changed，已保存配置不受污染</li>
+    <li><b>外部 YAML 改动立刻回灌 UI</b>（setConfig → _syncUI），修掉了「UI配置与YAML配置不同步」</li>
+    <li>实体选择器用 <code>ha-entity-picker</code>，电池字段按 <code>device_class: battery</code> 过滤</li>
+    <li>主题 / 日志过滤 / 点击行为改成<b>分段按钮</b>，数字项改成<b>步进器</b></li>
+  </ul>
+</div>
+
+<!-- 无 HA 环境时的最小控件替身，仅用于本页预览 -->
+<script>
+const MOCK_ENTITIES = {
+  sensor: [
+    ['sensor.lu_ke_suo_ri_zhi', '鹿客锁日志'],
+    ['sensor.men_suo_ri_zhi', '门锁日志'],
+    ['sensor.loock_cn_1062320566_fcl201_battery_level_p_10_1', '大电池'],
+    ['sensor.loock_cn_1062320566_fcl201_battery_level_p_4_1003', '小电池'],
+    ['sensor.zhi_neng_yin_xiang_battery_level', '智能音箱电量']
+  ],
+  binary_sensor: [
+    ['binary_sensor.lu_ke_suo_zhuang_tai', '鹿客锁状态'],
+    ['binary_sensor.lu_ke_suo_bu_fang', '鹿客锁布防'],
+    ['binary_sensor.lu_ke_suo_tong_suo', '鹿客锁童锁'],
+    ['binary_sensor.men_men_yi_kai', '大门已开']
+  ]
+};
+
+if(!customElements.get('ha-icon')){
+  const GLYPH = {
+    'mdi:file-document-edit-outline':'✎','mdi:shield-lock-outline':'⚿',
+    'mdi:battery-charging-high':'⚡','mdi:format-list-numbered':'☰',
+    'mdi:palette-outline':'◍','mdi:code-json':'{ }','mdi:lock':'⚿'
+  };
+  customElements.define('ha-icon', class extends HTMLElement{
+    connectedCallback(){
+      if(this._done) return; this._done = true;
+      this.textContent = GLYPH[this.getAttribute('icon')] || '•';
+      this.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;' +
+                           'width:1em;height:1em;font-size:15px;line-height:1';
+    }
+  });
+}
+
+if(!customElements.get('ha-switch')){
+  customElements.define('ha-switch', class extends HTMLElement{
+    static get observedAttributes(){ return ['checked'] }
+    get checked(){ return this.hasAttribute('checked') }
+    set checked(v){ v ? this.setAttribute('checked','') : this.removeAttribute('checked') }
+    connectedCallback(){
+      if(this._done) return; this._done = true;
+      this.style.cssText = 'display:inline-block;width:36px;height:20px;border-radius:99px;' +
+        'position:relative;cursor:pointer;transition:.18s;flex:0 0 auto;' +
+        'background:' + (this.checked ? 'var(--primary-color)' : 'rgba(128,128,128,.35)');
+      const knob = document.createElement('i');
+      knob.style.cssText = 'position:absolute;top:2px;left:' + (this.checked?'18px':'2px') +
+        ';width:16px;height:16px;border-radius:50%;background:#fff;transition:.18s;' +
+        'box-shadow:0 1px 3px rgba(0,0,0,.4)';
+      this.appendChild(knob);
+      this.addEventListener('click', e => {
+        e.stopPropagation();
+        this.checked = !this.checked;
+        this.style.background = this.checked ? 'var(--primary-color)' : 'rgba(128,128,128,.35)';
+        knob.style.left = this.checked ? '18px' : '2px';
+        this.dispatchEvent(new Event('change', {bubbles:true}));
+      });
+    }
+    attributeChangedCallback(){ if(this._done && this.firstChild){
+      this.style.background = this.checked ? 'var(--primary-color)' : 'rgba(128,128,128,.35)';
+      this.firstChild.style.left = this.checked ? '18px' : '2px';
+    }}
+  });
+}
+
+if(!customElements.get('ha-entity-picker')){
+  customElements.define('ha-entity-picker', class extends HTMLElement{
+    get value(){ return this._v || '' }
+    set value(v){ this._v = v || ''; this._draw && this._draw() }
+    connectedCallback(){
+      if(this._done) return; this._done = true;
+      this._v = this._v || '';
+      this.style.cssText = 'position:relative;display:block;width:100%';
+      this._draw();
+      this.addEventListener('click', e => {
+        e.stopPropagation();
+        const old = this.querySelector('.pop'); if(old){ old.remove(); return; }
+        const dom = this.domain === 'binary_sensor' ? 'binary_sensor' : 'sensor';
+        const pop = document.createElement('div');
+        pop.className = 'pop';
+        pop.style.cssText = 'position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;' +
+          'background:var(--ha-card-background);border:1px solid var(--divider-color);' +
+          'border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.35);overflow:hidden;' +
+          'max-height:190px;overflow-y:auto';
+        const mk = (id, name) => {
+          const it = document.createElement('div');
+          it.textContent = name + '  ·  ' + id;
+          it.style.cssText = 'padding:9px 12px;font-size:12px;cursor:pointer;' +
+            'border-bottom:1px solid var(--divider-color)';
+          it.onmouseenter = () => it.style.background = 'color-mix(in srgb, var(--primary-color) 14%, transparent)';
+          it.onmouseleave = () => it.style.background = 'transparent';
+          it.onclick = ev => {
+            ev.stopPropagation();
+            this.value = id;
+            pop.remove();
+            this.dispatchEvent(new CustomEvent('value-changed', {detail:{value:id}, bubbles:true, composed:true}));
+          };
+          return it;
+        };
+        pop.appendChild(mk('', '（留空 · 不配置）'));
+        (MOCK_ENTITIES[dom] || []).forEach(([id,n]) => pop.appendChild(mk(id,n)));
+        this.appendChild(pop);
+      });
+    }
+    _draw(){
+      const name = (MOCK_ENTITIES[this.domain === 'binary_sensor' ? 'binary_sensor':'sensor']||[])
+                     .find(x => x[0] === this._v);
+      this.innerHTML =
+        '<div class="box"><span class="v ' + (this._v ? 'set' : 'empty') + '">' +
+        (this._v ? (name ? name[1] + '　' : '') + this._v : (this.getAttribute('placeholder')||'选择实体')) +
+        '</span><span class="cv">▾</span></div>' +
+        '<style>' +
+        '.box{display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px;' +
+        'padding:0 11px;border:1px solid var(--divider-color);border-radius:9px;' +
+        'background:var(--ha-card-background);cursor:pointer;transition:.15s}' +
+        '.box:hover{border-color:var(--primary-color)}' +
+        '.v{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+        '.v.empty{color:var(--secondary-text-color);opacity:.75}' +
+        '.v.set{color:var(--primary-text-color);font-weight:600}' +
+        '.cv{color:var(--secondary-text-color);font-size:11px;flex:0 0 auto}</style>';
+    }
+  });
+}
+
+const MOCK_HASS = { states:{} };
+Object.entries(MOCK_ENTITIES).forEach(([dom, list]) => list.forEach(([id, n]) => {
+  MOCK_HASS.states[id] = {
+    entity_id:id, state:'ok',
+    attributes:{ friendly_name:n, device_class: dom==='sensor' && /battery/.test(id) ? 'battery' : undefined }
+  };
+}));
+</script>
+
+<!-- 真实卡片源码 -->
+<script src="./src/xiaomi-lock-card.js"></script>
+<script>
+const DEMO_CONFIG = {
+  type: 'custom:xiaomi-lock-card',
+  title: '鹿客智能锁 V5 Max',
+  log: 'sensor.lu_ke_suo_ri_zhi',
+  locked: 'binary_sensor.lu_ke_suo_zhuang_tai',
+  arm: 'binary_sensor.lu_ke_suo_bu_fang',
+  child: 'binary_sensor.lu_ke_suo_tong_suo',
+  battery: {
+    primary: 'sensor.loock_cn_1062320566_fcl201_battery_level_p_10_1',
+    secondary: 'sensor.loock_cn_1062320566_fcl201_battery_level_p_4_1003',
+    low: 20
+  },
+  records: { days: 2, limit: 5, refresh: 60, events: 'all', include_internal: false },
+  show_records: true,
+  theme: 'dark',
+  tap_action: 'more-info'
+};
+
+for(const which of ['dark','light']){
+  const stage = document.getElementById('stage-' + which);
+  const ed = document.createElement('xiaomi-lock-card-editor');
+  ed.hass = MOCK_HASS;
+  ed.setConfig(DEMO_CONFIG);
+  stage.appendChild(ed);
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('ha-entity-picker .pop').forEach(p => p.remove());
+});
+</script>
+</body>
+</html>

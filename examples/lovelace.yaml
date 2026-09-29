@@ -1,0 +1,25 @@
+# 鹿客智能锁卡片 · 配置示例
+# 将 src/xiaomi-lock-card.js 放到 HA 的 www/ 目录后，在 Lovelace 中引用
+
+type: custom:xiaomi-lock-card
+title: 鹿客智能锁 V5 Max                    # 可省略 → 自动读取日志实体 friendly_name
+log: sensor.lu_ke_suo_ri_zhi               # 核心：鹿客锁日志（必填）
+locked: binary_sensor.lu_ke_suo_zhuang_tai # on=已开锁 / off=已上锁
+arm: binary_sensor.lu_ke_suo_bu_fang        # 布防状态
+child: binary_sensor.lu_ke_suo_tong_suo    # 童锁
+
+battery:
+  primary: sensor.loock_cn_1062320566_fcl201_battery_level_p_10_1    # 大电池
+  secondary: sensor.loock_cn_1062320566_fcl201_battery_level_p_4_1003 # 小电池
+  low: 20                                 # <20% 红（20–49% 琥珀，≥50% 青）
+
+records:
+  days: 2                                 # 历史拉取天数
+  limit: 5                                # 最多显示条数
+  refresh: 60                             # 历史缓存秒数
+  events: all                             # all=全部日志 | unlock=仅开锁类
+  include_internal: false                 # 是否把「内部开锁」计入开锁统计
+
+show_records: true                        # false 隐藏记录列表
+theme: auto                               # dark（默认）| light | auto=跟随 HA 深浅主题
+tap_action: more-info                     # 卡片空白处点击 → more-info

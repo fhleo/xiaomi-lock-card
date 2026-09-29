@@ -1,0 +1,18 @@
+# 本地备份（部署时由脚本生成）
+*.bak
+*.bak-*
+.bak-*
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# 依赖（当前项目零依赖，留作以后构建链用）
+node_modules/
+package-lock.json
+
+# 日志
+*.log

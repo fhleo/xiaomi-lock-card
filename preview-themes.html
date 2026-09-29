@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xiaomi-lock-card · 双主题预览</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;padding:36px 16px 64px;gap:22px;
+    background:radial-gradient(900px 500px at 20% -10%,rgba(0,229,255,.07),transparent 60%),
+               radial-gradient(700px 500px at 90% 110%,rgba(77,124,255,.08),transparent 60%),#06090d;
+    font-family:system-ui,"Segoe UI","Microsoft YaHei",sans-serif;color:#e6edf3;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .stage-head{display:flex;align-items:center;gap:12px;color:#8b98a5;
+    font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.28em;text-transform:uppercase}
+  .stage-head::before,.stage-head::after{content:"";width:56px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(0,229,255,.16))}
+  .stage-head::after{background:linear-gradient(270deg,transparent,rgba(0,229,255,.16))}
+  .row{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .col h3{font-size:13px;font-weight:600;color:#8b98a5;letter-spacing:.15em}
+  .col.light-demo{
+    background:linear-gradient(160deg,#f8fafc,#eef2f6);
+    border-radius:26px;padding:22px 22px 18px;
+    box-shadow:0 20px 50px rgba(0,40,80,.15);
+  }
+  .col.light-demo h3{color:#5a6a7a}
+  .hint{font-size:12px;color:#8b98a5;text-align:center;max-width:560px;line-height:1.7;margin-top:18px}
+  .hint code{font-family:ui-monospace,Consolas,monospace;color:#00e5ff;font-size:11.5px}
+</style>
+</head>
+<body>
+
+<div class="stage-head">xiaomi-lock-card · 双主题预览</div>
+
+<div class="row">
+  <div class="col">
+    <h3>深色主题（默认）</h3>
+    <div id="darkMount"></div>
+  </div>
+  <div class="col light-demo">
+    <h3>浅色主题</h3>
+    <div id="lightMount"></div>
+  </div>
+</div>
+
+<p class="hint">
+  浅色主题：<code>theme: light</code>。卡片底白色渐变 + 淡蓝网格线，投影淡蓝灰；
+  主色降一档（<code>#0097a7</code>）保证白底对比度；状态行/统计条/弹窗/日历全部白底深字。
+  其余布局、动画、交互与深色完全一致。
+</p>
+
+<script src="./src/xiaomi-lock-card.js"></script>
+<script>
+  // 模拟 hass
+  var mockHass = {
+    'sensor.lu_ke_suo_ri_zhi': {
+      entity_id: 'sensor.lu_ke_suo_ri_zhi',
+      state: '2026-09-29 09:42:00:冯欢的指纹开门',
+      attributes: {
+        friendly_name: '鹿客智能锁 V5 Max',
+        '时间': '2026-09-29 09:42:00',
+        '日志内容': '冯欢的指纹开门',
+        '操作方式': '指纹',
+        '操作ID': '冯欢',
+        '锁动作': '开锁',
+        '操作位置': '外部开锁'
+      },
+      last_changed: '2026-09-29T09:42:00+08:00'
+    },
+    'binary_sensor.lu_ke_suo_zhuang_tai': {
+      entity_id: 'binary_sensor.lu_ke_suo_zhuang_tai',
+      state: 'off',
+      attributes: { friendly_name: '鹿客锁状态' },
+      last_changed: '2026-09-29T09:42:00+08:00'
+    },
+    'binary_sensor.lu_ke_suo_bu_fang': {
+      entity_id: 'binary_sensor.lu_ke_suo_bu_fang',
+      state: 'off',
+      attributes: { friendly_name: '鹿客布防' },
+      last_changed: '2026-09-29T09:42:00+08:00'
+    },
+    'binary_sensor.lu_ke_suo_tong_suo': {
+      entity_id: 'binary_sensor.lu_ke_suo_tong_suo',
+      state: 'off',
+      attributes: { friendly_name: '鹿客童锁' },
+      last_changed: '2026-09-29T09:42:00+08:00'
+    },
+    'sensor.loock_cn_1062320566_fcl201_battery_level_p_10_1': {
+      entity_id: 'sensor.loock_cn_1062320566_fcl201_battery_level_p_10_1',
+      state: '14',
+      attributes: { friendly_name: '大电池', unit_of_measurement: '%' },
+      last_changed: '2026-09-29T09:42:00+08:00'
+    },
+    'sensor.loock_cn_1062320566_fcl201_battery_level_p_4_1003': {
+      entity_id: 'sensor.loock_cn_1062320566_fcl201_battery_level_p_4_1003',
+      state: '79',
+      attributes: { friendly_name: '小电池', unit_of_measurement: '%' },
+      last_changed: '2026-09-29T09:42:00+08:00'
+    }
+  };
+
+  // 模拟 history API
+  function mockCallApi(method, path){
+    return Promise.resolve([[
+      {
+        entity_id: 'sensor.lu_ke_suo_ri_zhi',
+        state: '2026-09-29 16:20:00:门已关',
+        attributes: { '时间': '2026-09-29 16:20:00', '日志内容': '门已关', '锁动作': '关锁', '操作位置': '外部开锁' },
+        last_changed: '2026-09-29T16:20:00+08:00'
+      },
+      {
+        entity_id: 'sensor.lu_ke_suo_ri_zhi',
+        state: '2026-09-29 09:42:00:冯欢的指纹开门',
+        attributes: { '时间': '2026-09-29 09:42:00', '日志内容': '冯欢的指纹开门', '操作方式': '指纹', '操作ID': '冯欢', '锁动作': '开锁', '操作位置': '外部开锁' },
+        last_changed: '2026-09-29T09:42:00+08:00'
+      },
+      {
+        entity_id: 'sensor.lu_ke_suo_ri_zhi',
+        state: '2026-09-28 21:10:00:老妈的密码开门',
+        attributes: { '时间': '2026-09-28 21:10:00', '日志内容': '老妈的密码开门', '操作方式': '密码', '操作ID': '老妈', '锁动作': '开锁', '操作位置': '外部开锁' },
+        last_changed: '2026-09-28T21:10:00+08:00'
+      },
+      {
+        entity_id: 'sensor.lu_ke_suo_ri_zhi',
+        state: '2026-09-28 20:58:00:指纹频繁解锁失败',
+        attributes: { '时间': '2026-09-28 20:58:00', '日志内容': '指纹频繁解锁失败' },
+        last_changed: '2026-09-28T20:58:00+08:00'
+      },
+      {
+        entity_id: 'sensor.lu_ke_suo_ri_zhi',
+        state: '2026-09-28 12:03:00:门铃响了',
+        attributes: { '时间': '2026-09-28 12:03:00', '日志内容': '门铃响了' },
+        last_changed: '2026-09-28T12:03:00+08:00'
+      }
+    ]]);
+  }
+
+  function makeCard(theme){
+    var card = document.createElement('xiaomi-lock-card');
+    card.setConfig({
+      log: 'sensor.lu_ke_suo_ri_zhi',
+      locked: 'binary_sensor.lu_ke_suo_zhuang_tai',
+      arm: 'binary_sensor.lu_ke_suo_bu_fang',
+      child: 'binary_sensor.lu_ke_suo_tong_suo',
+      battery: {
+        primary: 'sensor.loock_cn_1062320566_fcl201_battery_level_p_10_1',
+        secondary: 'sensor.loock_cn_1062320566_fcl201_battery_level_p_4_1003'
+      },
+      records: { days: 2, limit: 5, refresh: 60 },
+      theme: theme
+    });
+    card.hass = Object.assign({}, mockHass, { callApi: mockCallApi });
+    return card;
+  }
+
+  document.getElementById('darkMount').appendChild(makeCard('dark'));
+  document.getElementById('lightMount').appendChild(makeCard('light'));
+</script>
+
+</body>
+</html>

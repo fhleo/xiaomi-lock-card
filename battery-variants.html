@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>电池方案对比 · xiaomi-lock-card</title>
+<style>
+  :root{
+    --accent:#00e5ff; --success:#00e676; --danger:#ff5252; --warn:#ffb300;
+    --info:#7fa7ff; --muted:#8b98a5; --text:#e6edf3;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#06090d;color:var(--text);font-family:system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:34px 16px;gap:22px}
+  h1{font-size:14px;color:var(--muted);letter-spacing:.24em;font-weight:600}
+  .grid{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+  .wrap{position:relative;padding-bottom:30px}
+  .vlabel{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:12.5px;color:var(--muted);letter-spacing:.06em}
+  .vlabel b{color:var(--text);font-weight:600}
+  .mini{position:relative;width:208px;height:172px;border-radius:16px;padding:14px 14px 0;
+    background:linear-gradient(160deg,#161e27 0%,#0d1218 55%,#0a0e13 100%);
+    border:1px solid rgba(0,229,255,.16);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+  .m-head{display:flex;align-items:center;gap:7px}
+  .m-icon{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+    background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3)}
+  .m-icon svg{width:13px;height:13px;stroke:var(--accent);fill:none;stroke-width:1.8}
+  .m-title{font-size:11px;white-space:nowrap}
+  .m-badge{margin-left:auto;font-size:9px;padding:3px 8px;border-radius:99px;color:var(--info);
+    border:1px solid rgba(127,167,255,.35);background:rgba(127,167,255,.1)}
+  .m-hero{position:relative;height:118px;display:grid;place-items:center}
+  .m-lock{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;
+    border:1px dashed rgba(0,229,255,.25);
+    background:radial-gradient(circle at 50% 45%,rgba(0,229,255,.09),transparent 70%)}
+  .m-lock svg{width:30px;height:30px;stroke:var(--info);fill:none;stroke-width:6;stroke-linecap:round}
+
+  /* ===== A 细线电池 ===== */
+  .vA{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+  .vA .b{position:relative;height:21px;padding:0 9px 0 8px;border-radius:6px;
+    display:flex;align-items:center;gap:5px;background:rgba(8,11,15,.55);
+    border:1.5px solid rgba(0,229,255,.55)}
+  .vA .b::after{content:"";position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+    width:3px;height:9px;border-radius:0 2px 2px 0;background:rgba(0,229,255,.55)}
+  .vA .f{position:absolute;left:0;top:0;bottom:0;border-radius:5px 0 0 5px;
+    background:linear-gradient(90deg,rgba(0,229,255,.5),rgba(0,229,255,.15))}
+  .vA .t{position:relative;font-size:9px;color:var(--muted)}
+  .vA .p{position:relative;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent)}
+  .vA .b.warn{border-color:rgba(255,179,0,.55)} .vA .b.warn::after{background:var(--warn)}
+  .vA .b.warn .f{background:linear-gradient(90deg,rgba(255,179,0,.5),rgba(255,179,0,.15))}
+  .vA .b.warn .p{color:var(--warn)}
+  .vA .b.low{border-color:rgba(255,82,82,.6)} .vA .b.low::after{background:var(--danger)}
+  .vA .b.low .f{background:linear-gradient(90deg,rgba(255,82,82,.55),rgba(255,82,82,.18))}
+  .vA .b.low .p{color:var(--danger)}
+
+  /* ===== B 竖向电池 ===== */
+  .vB{position:absolute;top:12px;right:12px;display:flex;gap:8px;align-items:flex-end}
+  .vB .c{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .vB .body{position:relative;border-radius:5px;overflow:hidden;background:rgba(0,0,0,.35);
+    border:1.5px solid rgba(0,229,255,.5)}
+  .vB .body i{position:absolute;left:0;right:0;bottom:0;
+    background:linear-gradient(180deg,var(--accent),rgba(0,229,255,.25))}
+  .vB .p{font-family:var(--mono);font-size:9.5px;color:var(--accent)}
+  .vB .big .body{width:19px;height:40px}
+  .vB .small .body{width:13px;height:27px}
+  .vB .c.warn .body{border-color:rgba(255,179,0,.5)}
+  .vB .c.warn .body i{background:linear-gradient(180deg,var(--warn),rgba(255,179,0,.25))}
+  .vB .c.warn .p{color:var(--warn)}
+  .vB .c.low .body{border-color:rgba(255,82,82,.55)}
+  .vB .c.low .body i{background:linear-gradient(180deg,var(--danger),rgba(255,82,82,.25))}
+  .vB .c.low .p{color:var(--danger)}
+
+  /* ===== C 极简文字 ===== */
+  .vC{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .vC .r{display:flex;align-items:center;gap:6px}
+  .vC .bar{width:3px;height:13px;border-radius:2px;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+  .vC .t{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent)}
+  .vC .r.warn .bar{background:var(--warn);box-shadow:0 0 6px var(--warn)} .vC .r.warn .t{color:var(--warn)}
+  .vC .r.low .bar{background:var(--danger);box-shadow:0 0 6px var(--danger)} .vC .r.low .t{color:var(--danger)}
+
+  /* ===== D 当前胶囊 ===== */
+  .vD{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  .vD .b{position:relative;height:21px;padding:0 12px 0 9px;border-radius:7px;
+    display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,rgba(20,27,35,.96),rgba(8,11,15,.96));
+    border:1px solid rgba(0,229,255,.5);box-shadow:0 4px 10px rgba(0,0,0,.5)}
+  .vD .f{position:absolute;left:0;top:0;bottom:0;border-radius:6px 0 0 6px;
+    background:linear-gradient(90deg,rgba(0,229,255,.42),rgba(0,229,255,.12))}
+  .vD .f::after{content:"";position:absolute;right:0;top:0;bottom:0;width:2px;
+    background:var(--accent);box-shadow:0 0 6px var(--accent)}
+  .vD .t{position:relative;font-size:9px;color:var(--muted)}
+  .vD .p{position:relative;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent)}
+  .vD .b.warn{border-color:rgba(255,179,0,.55)} .vD .b.warn .f{background:linear-gradient(90deg,rgba(255,179,0,.42),rgba(255,179,0,.12))}
+  .vD .b.warn .f::after{background:var(--warn);box-shadow:0 0 6px var(--warn)} .vD .b.warn .p{color:var(--warn)}
+  .vD .b.low{border-color:rgba(255,82,82,.6)} .vD .b.low .f{background:linear-gradient(90deg,rgba(255,82,82,.45),rgba(255,82,82,.14))}
+  .vD .b.low .f::after{background:var(--danger);box-shadow:0 0 6px var(--danger)} .vD .b.low .p{color:var(--danger)}
+</style>
+</head>
+<body>
+<h1>电池方案对比 · 大电池 14%（红）/ 小电池 79%（青）</h1>
+<div class="grid">
+
+  <div class="wrap">
+    <div class="mini">
+      <div class="m-head">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="m-title">入户门指纹锁</span>
+        <span class="m-badge">已上锁</span>
+      </div>
+      <div class="m-hero">
+        <div class="m-lock"><svg viewBox="0 0 120 120"><path d="M42 58 V40 A18 18 0 0 1 78 40 V58"/><rect x="26" y="58" width="68" height="50" rx="13"/><circle cx="60" cy="76" r="5.5"/><path d="M60 82 V91"/></svg></div>
+      </div>
+      <div class="vA">
+        <div class="b low"><span class="f" style="width:14%"></span><span class="t">大</span><span class="p">14%</span></div>
+        <div class="b"><span class="f" style="width:79%"></span><span class="t">小</span><span class="p">79%</span></div>
+      </div>
+    </div>
+    <div class="vlabel"><b>A · 细线电池</b>（手机状态栏风）</div>
+  </div>
+
+  <div class="wrap">
+    <div class="mini">
+      <div class="m-head">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="m-title">入户门指纹锁</span>
+        <span class="m-badge">已上锁</span>
+      </div>
+      <div class="m-hero">
+        <div class="m-lock"><svg viewBox="0 0 120 120"><path d="M42 58 V40 A18 18 0 0 1 78 40 V58"/><rect x="26" y="58" width="68" height="50" rx="13"/><circle cx="60" cy="76" r="5.5"/><path d="M60 82 V91"/></svg></div>
+      </div>
+      <div class="vB">
+        <div class="c big low"><span class="body"><i style="height:14%"></i></span><span class="p">14%</span></div>
+        <div class="c small"><span class="body"><i style="height:79%"></i></span><span class="p">79%</span></div>
+      </div>
+    </div>
+    <div class="vlabel"><b>B · 竖向电池</b>（大电池大、小电池小）</div>
+  </div>
+
+  <div class="wrap">
+    <div class="mini">
+      <div class="m-head">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="m-title">入户门指纹锁</span>
+        <span class="m-badge">已上锁</span>
+      </div>
+      <div class="m-hero">
+        <div class="m-lock"><svg viewBox="0 0 120 120"><path d="M42 58 V40 A18 18 0 0 1 78 40 V58"/><rect x="26" y="58" width="68" height="50" rx="13"/><circle cx="60" cy="76" r="5.5"/><path d="M60 82 V91"/></svg></div>
+      </div>
+      <div class="vC">
+        <div class="r low"><span class="bar"></span><span class="t">大 14%</span></div>
+        <div class="r"><span class="bar"></span><span class="t">小 79%</span></div>
+      </div>
+    </div>
+    <div class="vlabel"><b>C · 极简文字</b>（不要电池外形）</div>
+  </div>
+
+  <div class="wrap">
+    <div class="mini">
+      <div class="m-head">
+        <span class="m-icon"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="m-title">入户门指纹锁</span>
+        <span class="m-badge">已上锁</span>
+      </div>
+      <div class="m-hero">
+        <div class="m-lock"><svg viewBox="0 0 120 120"><path d="M42 58 V40 A18 18 0 0 1 78 40 V58"/><rect x="26" y="58" width="68" height="50" rx="13"/><circle cx="60" cy="76" r="5.5"/><path d="M60 82 V91"/></svg></div>
+      </div>
+      <div class="vD">
+        <div class="b low"><span class="f" style="width:14%"></span><span class="t">大</span><span class="p">14%</span></div>
+        <div class="b"><span class="f" style="width:79%"></span><span class="t">小</span><span class="p">79%</span></div>
+      </div>
+    </div>
+    <div class="vlabel"><b>D · 当前胶囊</b>（对照）</div>
+  </div>
+
+</div>
+</body>
+</html>

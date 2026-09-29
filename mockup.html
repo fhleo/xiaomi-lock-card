@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xiaomi-lock-card · 视觉稿 v5</title>
+<style>
+  :root{
+    --bg-deep:#0a0e13;
+    --surface:#141b23;
+    --line:rgba(0,229,255,.16);
+    --accent:#00e5ff;
+    --accent-2:#4d7cff;
+    --info:#7fa7ff;
+    --success:#00e676;
+    --danger:#ff5252;
+    --warn:#ffb300;
+    --text:#e6edf3;
+    --muted:#8b98a5;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 20% -10%, rgba(0,229,255,.07), transparent 60%),
+      radial-gradient(700px 500px at 90% 110%, rgba(77,124,255,.08), transparent 60%),
+      #06090d;
+    font-family:system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    display:flex;flex-direction:column;align-items:center;
+    padding:36px 16px 64px;gap:22px;
+  }
+  /* ---------- 舞台标题 ---------- */
+  .stage-head{display:flex;align-items:center;gap:12px;color:var(--muted);
+    font-family:var(--mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase}
+  .stage-head::before,.stage-head::after{content:"";width:56px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line))}
+  .stage-head::after{background:linear-gradient(270deg,transparent,var(--line))}
+
+  /* ---------- 模拟日志推送 ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  .controls button{
+    background:rgba(20,27,35,.8);border:1px solid var(--line);color:var(--muted);
+    padding:8px 16px;border-radius:99px;font-size:13px;cursor:pointer;
+    transition:.2s;letter-spacing:.04em;
+  }
+  .controls button:hover{color:var(--text);border-color:rgba(0,229,255,.5);
+    box-shadow:0 0 14px rgba(0,229,255,.18)}
+  .controls button.on{color:#06121a;background:var(--accent);border-color:var(--accent);
+    font-weight:600;box-shadow:0 0 18px rgba(0,229,255,.4)}
+
+  /* ================= 卡片 ================= */
+  .card{
+    position:relative;width:376px;border-radius:22px;padding:20px 20px 16px;
+    background:
+      linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px),
+      linear-gradient(160deg,#161e27 0%, #0d1218 55%, #0a0e13 100%);
+    background-size:24px 24px,24px 24px,100% 100%;
+    border:1px solid var(--line);
+    box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+    overflow:hidden;
+  }
+  /* HUD 四角 */
+  .hud{position:absolute;width:22px;height:22px;pointer-events:none;opacity:.75}
+  .hud::before,.hud::after{content:"";position:absolute;background:var(--accent);
+    box-shadow:0 0 6px rgba(0,229,255,.6)}
+  .hud::before{width:100%;height:1.5px}
+  .hud::after{width:1.5px;height:100%}
+  .hud.tl{top:9px;left:9px}
+  .hud.tr{top:9px;right:9px;transform:scaleX(-1)}
+  .hud.bl{bottom:9px;left:9px;transform:scaleY(-1)}
+  .hud.br{bottom:9px;right:9px;transform:scale(-1)}
+
+  /* ① 头部 */
+  .head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 4px 0}
+  .head-left{display:flex;align-items:center;gap:11px;min-width:0}
+  .head-icon{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+    background:linear-gradient(145deg,rgba(0,229,255,.16),rgba(77,124,255,.1));
+    border:1px solid rgba(0,229,255,.3);box-shadow:0 0 14px rgba(0,229,255,.15) inset}
+  .head-icon svg{width:19px;height:19px;stroke:var(--accent);fill:none;stroke-width:1.8}
+  .head-icon.ring{animation:bellRing .55s ease-in-out 2}
+  @keyframes bellRing{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+  .title-row{display:flex;align-items:center;gap:10px;min-width:0}
+  .head h2{font-size:16.5px;font-weight:650;letter-spacing:.02em;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .head p{font-size:11.5px;color:var(--muted);margin-top:2px;letter-spacing:.05em}
+  .badge{flex:none;font-size:11.5px;font-weight:600;letter-spacing:.06em;transition:.3s}
+  .badge.locked{color:var(--info)}
+  .badge.unlocked{color:var(--success)}
+  .badge.alarm{color:var(--danger);animation:blink 1s steps(2) infinite}
+
+  /* ② 主视觉：锁/门状态图标（门状态集成于此） */
+  .hero{display:flex;align-items:center;justify-content:center;padding:18px 0 6px}
+  .lockwrap{position:relative;width:158px;height:158px;border-radius:50%;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:7px;isolation:isolate}
+  .lockwrap::before{content:"";position:absolute;inset:0;border-radius:50%;
+    border:1px solid rgba(0,229,255,.22);
+    background:radial-gradient(circle at 50% 45%, rgba(0,229,255,.09), rgba(10,14,19,.4) 70%);
+    transition:border-color .4s,background .4s,box-shadow .4s}
+  .lockwrap::after{content:"";position:absolute;inset:-7px;border-radius:50%;
+    border:1px dashed rgba(0,229,255,.2);border-top-color:transparent;border-bottom-color:transparent;
+    animation:spin 14s linear infinite}
+  .lock{width:84px;height:84px;position:relative;z-index:2;overflow:visible;
+    stroke:var(--info);transition:stroke .45s,filter .45s;animation:breathe 4.5s ease-in-out infinite}
+  .lock .shackle{fill:none;stroke-width:9;stroke-linecap:round;
+    transform-origin:42px 58px;transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+  .lock .body{fill:rgba(8,11,15,.92);stroke-width:7}
+  .lock .key{fill:none;stroke-width:6;stroke-linecap:round}
+  .lock .keyline{stroke-width:6;stroke-linecap:round}
+  @keyframes breathe{50%{opacity:.72}}
+  /* 已开锁：绿色 + 锁梁弹开 */
+  .lockwrap[data-state="unlocked"]::before{border-color:rgba(0,230,118,.5);
+    background:radial-gradient(circle at 50% 45%, rgba(0,230,118,.16), transparent 70%);
+    box-shadow:0 0 34px rgba(0,230,118,.3) inset,0 0 26px rgba(0,230,118,.28)}
+  .lockwrap[data-state="unlocked"] .lock{stroke:var(--success);
+    filter:drop-shadow(0 0 8px rgba(0,230,118,.55))}
+  .lockwrap[data-state="unlocked"] .shackle{transform:rotate(-16deg)}
+  .lockwrap[data-state="unlocked"] .pulse{animation:pulse .9s ease-out .15s}
+  /* 失败：红色抖动 */
+  .lockwrap.shake{animation:shake .45s cubic-bezier(.36,.07,.19,.97) both}
+  .lockwrap.shake::before{border-color:rgba(255,82,82,.55);
+    background:radial-gradient(circle at 50% 45%, rgba(255,82,82,.14), transparent 70%)}
+  .lockwrap.shake .lock{stroke:var(--danger);filter:drop-shadow(0 0 8px rgba(255,82,82,.7))}
+  .pulse{position:absolute;inset:0;border-radius:50%;border:2px solid var(--success);opacity:0;z-index:1}
+  @keyframes pulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.45)}}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}
+    30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes blink{50%{opacity:.45}}
+
+  /* 卡片右上角电量：两块电池（色条+文字，大电池条更高） */
+  .batt-group{position:absolute;top:34px;right:16px;z-index:5;
+    display:flex;align-items:flex-end;gap:11px}
+  .batt{display:flex;align-items:flex-end;gap:6px;padding:0;cursor:pointer;
+    background:none;border:none}
+  .batt .bar{width:3px;border-radius:2px;background:var(--accent);
+    box-shadow:0 0 7px var(--accent);transition:background .3s,box-shadow .3s,height .6s ease}
+  .batt .t{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent);
+    letter-spacing:.02em;text-shadow:0 1px 3px rgba(0,0,0,.9);transition:color .3s}
+  .batt.warn .bar{background:var(--warn);box-shadow:0 0 7px var(--warn)}
+  .batt.warn .t{color:var(--warn)}
+  .batt.low .bar{background:var(--danger);box-shadow:0 0 7px var(--danger)}
+  .batt.low .t{color:var(--danger)}
+
+  /* 锁下方状态徽章（环内） */
+  .lockwrap .badge{font-size:12px;margin-top:2px}
+  /* 通用跳动动画 */
+  .bump{animation:bump .5s cubic-bezier(.34,1.56,.64,1)}
+
+  /* ③ 状态行：常驻＝最近外部开锁的日志原文 + 事件临时显示 */
+  .status{display:flex;align-items:center;gap:9px;margin:10px 4px 0;padding:10px 14px;
+    border-radius:13px;background:rgba(8,11,15,.66);border:1px solid rgba(255,255,255,.055);
+    transition:border-color .3s}
+  .status .sdot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--muted);
+    box-shadow:0 0 8px currentColor;color:var(--muted);transition:background .3s,color .3s}
+  .status .stext{flex:1;font-size:13.5px;letter-spacing:.03em;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .status .ts{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.03em}
+  .status.ok .sdot{background:var(--success);color:var(--success)}
+  .status.ok .stext{color:var(--success)}
+  .status.err .sdot{background:var(--danger);color:var(--danger)}
+  .status.err .stext{color:var(--danger)}
+  .status.busy .sdot{background:var(--accent);color:var(--accent)}
+  .status.busy .stext{color:var(--accent)}
+  .status.info .sdot{background:var(--info);color:var(--info)}
+  .status.info .stext{color:var(--info)}
+
+  /* ④ 状态统计条：布防状态 / 童锁 */
+  .tiles{display:flex;gap:9px;margin-top:12px}
+  .tile{flex:1;min-width:0;padding:10px 8px 9px;border-radius:13px;text-align:center;
+    background:rgba(8,11,15,.66);border:1px solid rgba(255,255,255,.055);cursor:pointer;
+    transition:border-color .2s,background .2s}
+  .tile:hover{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.05)}
+  .tile .t-lab{display:block;font-size:10px;color:var(--muted);letter-spacing:.18em;margin-bottom:5px}
+  .tile .t-val{font-family:var(--mono);font-size:14.5px;font-weight:600;letter-spacing:.02em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  .tile .t-val small{font-size:10px;color:var(--muted);font-weight:400;margin-left:1px}
+  .tile .t-val.ok{color:var(--success)}
+  .tile .t-val.mut{color:var(--muted)}
+  /* 状态格图标 */
+  .tile.st .t-ic{display:grid;place-items:center;width:32px;height:32px;margin:0 auto 7px;
+    border-radius:10px;color:var(--muted);background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);transition:.3s}
+  .tile.st .t-ic svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .tile.st.on .t-ic{color:var(--success);background:rgba(0,230,118,.1);
+    border-color:rgba(0,230,118,.4);box-shadow:0 0 14px rgba(0,230,118,.25)}
+  .tile.st.on .t-val{color:var(--success)}
+  @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.28);color:var(--success)}100%{transform:scale(1)}}
+
+
+
+  /* ⑤ 记录列表：分组 + 筛选 + 可滚动 */
+  .records{margin-top:15px;border-top:1px solid rgba(255,255,255,.07);padding-top:13px}
+  .rec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .rec-head h3{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.22em;text-transform:uppercase}
+  .filter{position:relative}
+  .filter>button{font-size:11.5px;color:var(--accent);cursor:pointer;letter-spacing:.08em;opacity:.85;
+    background:none;border:none;padding:0}
+  .filter>button:hover{opacity:1;text-shadow:0 0 8px rgba(0,229,255,.6)}
+  .filter-menu{display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:110px;
+    background:rgba(10,14,19,.97);border:1px solid rgba(0,229,255,.25);border-radius:10px;
+    padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  .filter-menu.open{display:block;animation:slideDown .25s cubic-bezier(.2,.9,.3,1)}
+  .filter-menu button{display:block;width:100%;text-align:left;font-size:12px;color:var(--text);
+    padding:7px 10px;border-radius:7px;background:none;border:none;cursor:pointer;letter-spacing:.04em}
+  .filter-menu button:hover{background:rgba(0,229,255,.1)}
+  .filter-menu button.active{color:var(--accent);background:rgba(0,229,255,.12)}
+  .rec-date-picker{display:none;padding:2px 0 6px}
+  .rec-date-picker.open{display:block}
+  .date-range{display:flex;align-items:center;gap:8px}
+  .date-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;
+    background:rgba(8,11,15,.8);border:1px solid rgba(0,229,255,.25);border-radius:8px;
+    color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;cursor:pointer;
+    transition:border-color .2s}
+  .date-btn:hover{border-color:rgba(0,229,255,.5)}
+  .date-btn svg{width:14px;height:14px;stroke:var(--accent);fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .date-btn.filled{color:var(--accent);border-color:rgba(0,229,255,.5)}
+  .date-sep{color:var(--muted);font-size:12px;flex:none}
+  .calendar-pop{display:none;margin-top:8px;background:rgba(10,14,19,.97);
+    border:1px solid rgba(0,229,255,.25);
+    border-radius:10px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  .calendar-pop.open{display:block;animation:slideDown .2s cubic-bezier(.2,.9,.3,1)}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .cal-header button{background:none;border:none;color:var(--accent);font-size:16px;
+    cursor:pointer;padding:2px 8px;border-radius:6px;line-height:1}
+  .cal-header button:hover{background:rgba(0,229,255,.1)}
+  .cal-title{font-size:12px;color:var(--text);font-family:var(--mono);letter-spacing:.05em}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal-dow{font-size:10px;color:var(--muted);text-align:center;padding:4px 0}
+  .cal-day{font-size:11px;color:var(--text);text-align:center;padding:6px 0;border-radius:6px;
+    cursor:pointer;font-family:var(--mono);transition:background .15s}
+  .cal-day:hover{background:rgba(0,229,255,.15)}
+  .cal-day.empty{cursor:default;background:none}
+  .cal-day.selected{background:var(--accent);color:#06121a;font-weight:700}
+  .cal-day.in-range{background:rgba(0,229,255,.2)}
+  .rec-list{max-height:190px;overflow-y:auto;scrollbar-width:thin;
+    scrollbar-color:rgba(0,229,255,.3) transparent}
+  .rec-list::-webkit-scrollbar{width:4px}
+  .rec-list::-webkit-scrollbar-thumb{background:rgba(0,229,255,.3);border-radius:2px}
+  .rec-group{font-size:10px;color:var(--muted);letter-spacing:.18em;padding:8px 6px 3px;
+    text-transform:uppercase}
+  .rec-group:first-child{padding-top:2px}
+  .rec{display:flex;align-items:center;gap:12px;padding:9px 6px;border-radius:11px;
+    transition:background .2s;cursor:pointer}
+  .rec:hover{background:rgba(255,255,255,.045)}
+  .rec+.rec{border-top:1px solid rgba(255,255,255,.045)}
+  .rec-ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:rgba(0,230,118,.11);border:1px solid rgba(0,230,118,.3)}
+  .rec-ic svg{width:15px;height:15px;stroke:var(--success);fill:none;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .rec.bad .rec-ic{background:rgba(255,82,82,.11);border-color:rgba(255,82,82,.35)}
+  .rec.bad .rec-ic svg{stroke:var(--danger)}
+  .rec.info .rec-ic{background:rgba(127,167,255,.1);border-color:rgba(127,167,255,.3)}
+  .rec.info .rec-ic svg{stroke:var(--info)}
+  .rec.bell .rec-ic{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3)}
+  .rec.bell .rec-ic svg{stroke:var(--accent)}
+  .rec.plain .rec-ic{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
+  .rec.plain .rec-ic svg{stroke:var(--muted)}
+  .rec-main{flex:1;min-width:0}
+  .rec-main b{display:block;font-size:13.5px;font-weight:600;letter-spacing:.02em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rec time{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+  .rec.new{animation:rowIn .5s cubic-bezier(.2,.9,.3,1)}
+  @keyframes rowIn{from{opacity:0;transform:translateY(-8px);background:rgba(0,230,118,.16)}
+    to{opacity:1;transform:none}}
+
+  .hint{font-size:12px;color:var(--muted);text-align:center;max-width:560px;line-height:1.7}
+  .hint code{font-family:var(--mono);color:var(--accent);font-size:11.5px}
+
+  @media (max-width:430px){ .card{width:100%} }
+  @media (prefers-reduced-motion:reduce){
+    .lockwrap::after,.lock{animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage-head">xiaomi-lock-card · 视觉稿 v6 · 模拟日志推送</div>
+
+<div class="controls">
+  <button data-event="fp">冯欢的指纹开门</button>
+  <button data-event="pw">老妈的密码开门</button>
+  <button data-event="fail">指纹频繁解锁失败</button>
+  <button data-event="door">门已关</button>
+  <button data-event="bell">门铃响了</button>
+  <button id="btnArm">布防</button>
+  <button id="btnChild">童锁</button>
+  <button id="btnBatt">低电量</button>
+</div>
+
+<div class="card">
+  <i class="hud tl"></i><i class="hud tr"></i><i class="hud bl"></i><i class="hud br"></i>
+
+  <!-- ① 头部 -->
+  <header class="head">
+    <div class="head-left">
+      <div class="head-icon" id="headIcon">
+        <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <div style="min-width:0">
+        <!-- 标题：默认读取设备名（日志实体 friendly_name），可配置覆盖 -->
+        <h2>鹿客智能锁 V5 Max</h2>
+      </div>
+    </div>
+  </header>
+
+  <!-- 电量：卡片右上角（HUD 角内侧），两块电池 -->
+  <div class="batt-group">
+    <button class="batt low" id="battBig" title="大电池">
+      <span class="bar"></span><span class="t">14%</span>
+    </button>
+    <button class="batt" id="battSmall" title="小电池">
+      <span class="bar"></span><span class="t">79%</span>
+    </button>
+  </div>
+
+  <!-- ② 主视觉：锁/门状态图标（门状态集成于此） -->
+  <section class="hero">
+    <div class="lockwrap" id="lockWrap" data-state="locked">
+      <span class="pulse"></span>
+      <svg class="lock" viewBox="0 0 120 120">
+        <path class="shackle" d="M42 58 V40 A18 18 0 0 1 78 40 V58"/>
+        <rect class="body" x="26" y="58" width="68" height="50" rx="13"/>
+        <circle class="key" cx="60" cy="76" r="5.5"/>
+        <path class="keyline" d="M60 82 V91"/>
+      </svg>
+      <span class="badge locked" id="badge">已上锁</span>
+    </div>
+  </section>
+
+  <!-- ③ 状态行：默认＝最近外部开锁的日志原文，新事件临时覆盖 3s -->
+  <div class="status" id="status">
+    <span class="sdot"></span>
+    <span class="stext" id="statusText">冯欢的指纹开门</span>
+    <span class="ts" id="statusTs">今天 09:42</span>
+  </div>
+
+  <!-- ④ 状态统计条：布防状态 / 今日开锁 / 童锁 -->
+  <div class="tiles">
+    <div class="tile st" id="armTile">
+      <span class="t-ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6Z"/></svg></span>
+      <span class="t-lab">布防状态</span>
+      <span class="t-val mut" id="armVal">未布防</span>
+    </div>
+    <div class="tile st">
+      <span class="t-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <span class="t-lab">今日开锁</span>
+      <span class="t-val" id="todayVal">6<small>次</small></span>
+    </div>
+    <div class="tile st" id="childTile">
+      <span class="t-ic"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 7v3"/></svg></span>
+      <span class="t-lab">童锁</span>
+      <span class="t-val mut" id="childVal">未开启</span>
+    </div>
+  </div>
+
+  <!-- ⑤ 记录列表：分组 + 筛选 + 可滚动 -->
+  <div class="records" id="records">
+    <div class="rec-head">
+      <h3>最近日志</h3>
+      <div class="filter">
+        <button id="filterBtn">筛选 ▾</button>
+        <div class="filter-menu" id="filterMenu">
+          <button data-filter="all" class="active">全部</button>
+          <button data-filter="date">按日期</button>
+          <button data-filter="alert">告警</button>
+          <button data-filter="unlock">开门</button>
+          <button data-filter="lock">关门</button>
+        </div>
+      </div>
+    </div>
+    <div class="rec-date-picker" id="datePicker">
+      <div class="date-range">
+        <button class="date-btn" id="startDateBtn">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>
+          <span id="startDateText">起始日期</span>
+        </button>
+        <span class="date-sep">→</span>
+        <button class="date-btn" id="endDateBtn">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>
+          <span id="endDateText">结束日期</span>
+        </button>
+      </div>
+      <div class="calendar-pop" id="calendarPop">
+        <div class="cal-header">
+          <button class="cal-prev" id="calPrev">‹</button>
+          <span class="cal-title" id="calTitle"></span>
+          <button class="cal-next" id="calNext">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid">
+          <span class="cal-dow">日</span>
+          <span class="cal-dow">一</span>
+          <span class="cal-dow">二</span>
+          <span class="cal-dow">三</span>
+          <span class="cal-dow">四</span>
+          <span class="cal-dow">五</span>
+          <span class="cal-dow">六</span>
+        </div>
+      </div>
+    </div>
+    <div class="rec-list" id="recList">
+      <div class="rec-group">今天</div>
+      <div class="rec info" data-cat="lock" data-date="今天" data-iso="2026-09-29">
+        <span class="rec-ic"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <div class="rec-main"><b>门已关</b></div>
+        <time>16:20</time>
+      </div>
+      <div class="rec" data-cat="unlock" data-date="今天" data-iso="2026-09-29">
+        <span class="rec-ic"><svg viewBox="0 0 24 24"><path d="M12 2C7 2 3.5 6 3.5 11c0 3.5 1.5 6.5 3 9"/><path d="M12 6c-3.5 0-6 3-6 6.5 0 2.5 1 4.5 2 6.5"/><path d="M12 10c-1.5 0-2.5 1.2-2.5 3s.7 3 1.5 4.5"/></svg></span>
+        <div class="rec-main"><b>冯欢的指纹开门</b></div>
+        <time>09:42</time>
+      </div>
+      <div class="rec-group">昨天</div>
+      <div class="rec" data-cat="unlock" data-date="昨天" data-iso="2026-09-28">
+        <span class="rec-ic"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></span>
+        <div class="rec-main"><b>老妈的密码开门</b></div>
+        <time>21:10</time>
+      </div>
+      <div class="rec bad" data-cat="fail" data-date="昨天" data-iso="2026-09-28">
+        <span class="rec-ic"><svg viewBox="0 0 24 24"><path d="M6 6 L18 18"/><path d="M18 6 L6 18"/></svg></span>
+        <div class="rec-main"><b>指纹频繁解锁失败</b></div>
+        <time>20:58</time>
+      </div>
+      <div class="rec bell" data-cat="bell" data-date="昨天" data-iso="2026-09-28">
+        <span class="rec-ic"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg></span>
+        <div class="rec-main"><b>门铃响了</b></div>
+        <time>12:03</time>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="hint">点上方按钮模拟 <code>sensor.lu_ke_suo_ri_zhi</code> 推送新日志：开锁 → 中央锁图标弹开变绿，状态行显示该条日志原文；<code>门已关</code> → 锁图标合拢；失败 → 红色抖动；门铃 → 头部图标摆动；每条日志都会插入「最近日志」（正文＝<code>日志内容</code> 原文）。记录列表按日期分组、可滚动，右上角「筛选」可按 全部 / 按日期（起始＋结束）/ 告警 / 开门 / 关门 过滤。状态行只在开锁时更新（显示该条日志内容），其它事件不改变状态行。中央锁图标：圆环不动，锁上移，锁下方（环内）依次为状态徽章、「今日开锁」；统计条＝布防状态 / 童锁；卡片右上角是两块电池（下对齐），色条长短随电量变化，颜色分级：≥50 青 / 20–49 琥珀 / <20 红。</p>
+
+<script>
+  /* ---------- 元素 ---------- */
+  const status     = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const statusTs   = document.getElementById('statusTs');
+  const lockWrap   = document.getElementById('lockWrap');
+  const badge      = document.getElementById('badge');
+  const headIcon   = document.getElementById('headIcon');
+  const armVal     = document.getElementById('armVal');
+  const childVal   = document.getElementById('childVal');
+  const armTile    = document.getElementById('armTile');
+  const childTile  = document.getElementById('childTile');
+  const todayVal   = document.getElementById('todayVal');
+  const lastLockVal= document.getElementById('lastLockVal');
+  const recList    = document.getElementById('recList');
+  const battBig    = document.getElementById('battBig');
+  const battSmall  = document.getElementById('battSmall');
+
+  let resetTimer = null;
+  let lockIsLocked = true;          // 锁/门状态（驱动徽章 + 中央锁图标）
+  let armed = false;
+  let childOn = false;
+  let bigLow = false;
+  let todayCount = 6;
+  let lastUnlock = { text:'冯欢的指纹开门', when:'今天 09:42' };   // 状态行＝最近外部开锁的日志原文
+
+  const now = () => new Date().toTimeString().slice(0,8);
+  const hm = () => now().slice(0,5);
+
+  /* ---------- 状态行：常驻默认 + 3 秒事件覆盖 ---------- */
+  function showDefault(){
+    status.className = 'status';
+    statusText.textContent = lastUnlock.text;     // 日志内容原文，无前缀
+    statusTs.textContent = lastUnlock.when;
+  }
+  function showEvent(cls, text, ts){
+    clearTimeout(resetTimer);
+    status.className = 'status ' + cls;
+    statusText.textContent = text;
+    statusTs.textContent = ts;
+    resetTimer = setTimeout(showDefault, 3000);
+  }
+
+  /* ---------- 徽章 / 锁图标（门状态集成于此） ---------- */
+  function renderBadge(){
+    if(lockIsLocked)      setBadge('locked','已上锁');
+    else                  setBadge('unlocked','已开锁');
+  }
+  function setBadge(kind, label){
+    badge.className = 'badge ' + kind;
+    badge.textContent = label;
+  }
+  function applyLockState(unlocked){        // 锁/门状态唯一来源
+    lockIsLocked = !unlocked;
+    lockWrap.dataset.state = unlocked ? 'unlocked' : 'locked';
+    renderBadge();
+  }
+  function shakeLock(){
+    lockWrap.classList.remove('shake'); void lockWrap.offsetWidth;
+    lockWrap.classList.add('shake');
+    setTimeout(()=> lockWrap.classList.remove('shake'), 1300);
+  }
+
+  /* ---------- 统计条 ---------- */
+  function bumpToday(){
+    todayCount++;
+    todayVal.innerHTML = todayCount + '<small>次</small>';
+    bump(todayVal);
+  }
+  function bumpLastLock(t){
+    lastLockVal.textContent = t;
+    bump(lastLockVal);
+  }
+  function bump(el){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+
+  /* ---------- 电量：大/小两块电池，各自显示、各自着色 ---------- */
+  function setBatt(el, pct){
+    el.querySelector('.t').textContent = pct + '%';
+    el.querySelector('.bar').style.height = Math.max(4, Math.round(3 + pct * 0.15)) + 'px';
+    el.classList.toggle('warn', pct >= 20 && pct < 50);
+    el.classList.toggle('low', pct < 20);
+  }
+
+  /* ---------- 记录：全部日志，正文＝日志内容 ---------- */
+  const ICONS = {
+    fp:'<path d="M12 2C7 2 3.5 6 3.5 11c0 3.5 1.5 6.5 3 9"/><path d="M12 6c-3.5 0-6 3-6 6.5 0 2.5 1 4.5 2 6.5"/><path d="M12 10c-1.5 0-2.5 1.2-2.5 3s.7 3 1.5 4.5"/>',
+    pw:'<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    lock:'<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    x:'<path d="M6 6 L18 18"/><path d="M18 6 L6 18"/>',
+    bell:'<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/>',
+    dot:'<circle cx="12" cy="12" r="7"/>'
+  };
+  const CAT = {                                   // 类别 → 行样式 class
+    unlock:'', lock:'info', fail:'bad', bell:'bell', other:'plain'
+  };
+  function addRecord(cat, text, ico){
+    const row = document.createElement('div');
+    row.className = 'rec new ' + CAT[cat];
+    row.dataset.cat = cat;
+    row.dataset.date = '今天';
+    row.dataset.iso = new Date().toISOString().slice(0,10);
+    row.innerHTML = `
+      <span class="rec-ic"><svg viewBox="0 0 24 24">${ICONS[ico || cat] || ICONS.dot}</svg></span>
+      <div class="rec-main"><b></b></div>
+      <time>刚刚</time>`;
+    row.querySelector('b').textContent = text;      // 日志内容原文
+    recList.prepend(row);
+    applyFilter();
+    recList.scrollTop = 0;
+  }
+
+  /* ---------- 记录筛选：全部 / 按日期 / 告警 / 开门 / 关门 ---------- */
+  let currentFilter = 'all';
+  let startDate = '';
+  let endDate = '';
+  let calYear, calMonth, calTarget = null;
+  const filterBtn   = document.getElementById('filterBtn');
+  const filterMenu  = document.getElementById('filterMenu');
+  const datePicker  = document.getElementById('datePicker');
+  const startDateBtn  = document.getElementById('startDateBtn');
+  const endDateBtn    = document.getElementById('endDateBtn');
+  const startDateText = document.getElementById('startDateText');
+  const endDateText   = document.getElementById('endDateText');
+  const calendarPop   = document.getElementById('calendarPop');
+  const calTitle      = document.getElementById('calTitle');
+  const calGrid       = document.getElementById('calGrid');
+
+  function applyFilter(){
+    const visibleDates = {};
+    recList.querySelectorAll('.rec').forEach(row => {
+      const cat = row.dataset.cat, date = row.dataset.date;
+      let show = false;
+      if(currentFilter === 'all')               show = true;
+      else if(currentFilter === 'alert')        show = (cat === 'fail' || cat === 'bell');
+      else if(currentFilter === 'unlock')       show = cat === 'unlock';
+      else if(currentFilter === 'lock')         show = cat === 'lock';
+      else if(currentFilter === 'date'){
+        const iso = row.dataset.iso;
+        if(!iso) show = false;
+        else{
+          show = true;
+          if(startDate && iso < startDate) show = false;
+          if(endDate   && iso > endDate)   show = false;
+        }
+      }
+      row.style.display = show ? '' : 'none';
+      if(show) visibleDates[date] = true;
+    });
+    recList.querySelectorAll('.rec-group').forEach(g => {
+      g.style.display = visibleDates[g.textContent] ? '' : 'none';
+    });
+  }
+  filterBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    filterMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => filterMenu.classList.remove('open'));
+  filterMenu.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      currentFilter = b.dataset.filter;
+      filterMenu.querySelectorAll('button').forEach(x =>
+        x.classList.toggle('active', x === b));
+      datePicker.classList.toggle('open', currentFilter === 'date');
+      if(currentFilter !== 'date') closeCal();
+      filterBtn.textContent = (currentFilter === 'all' ? '筛选' : b.textContent) + ' ▾';
+      applyFilter();
+      filterMenu.classList.remove('open');
+    });
+  });
+  /* ---------- 日历弹窗：选择起始/结束日期（点选，非输入） ---------- */
+  function openCal(target){
+    calTarget = target;
+    if(!calYear){                       // 首次打开定位到当月
+      const now = new Date();
+      calYear = now.getFullYear();
+      calMonth = now.getMonth();
+    }
+    renderCal();
+    calendarPop.classList.add('open');
+  }
+  function closeCal(){ calendarPop.classList.remove('open'); }
+  function renderCal(){
+    calTitle.textContent = calYear + '年' + (calMonth + 1) + '月';
+    calGrid.querySelectorAll('.cal-day').forEach(d => d.remove());
+    const firstDow = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    for(let i = 0; i < firstDow; i++){
+      const e = document.createElement('span');
+      e.className = 'cal-day empty';
+      calGrid.appendChild(e);
+    }
+    for(let d = 1; d <= daysInMonth; d++){
+      const btn = document.createElement('span');
+      btn.className = 'cal-day';
+      btn.textContent = d;
+      const iso = calYear + '-' + String(calMonth + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      if(iso === startDate || iso === endDate) btn.classList.add('selected');
+      else if(startDate && endDate && iso > startDate && iso < endDate) btn.classList.add('in-range');
+      btn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        if(calTarget === 'start'){
+          startDate = iso;
+          startDateText.textContent = formatDateShort(iso);
+          startDateBtn.classList.add('filled');
+        } else {
+          endDate = iso;
+          endDateText.textContent = formatDateShort(iso);
+          endDateBtn.classList.add('filled');
+        }
+        if(startDate && endDate && startDate > endDate){   // 起止颠倒时自动交换
+          const t = startDate; startDate = endDate; endDate = t;
+          startDateText.textContent = formatDateShort(startDate);
+          endDateText.textContent   = formatDateShort(endDate);
+        }
+        applyFilter();
+        renderCal();
+        closeCal();
+      });
+      calGrid.appendChild(btn);
+    }
+  }
+  /* 本地日期 → YYYY-MM-DD（不能用 toISOString，那是 UTC，会在时区偏移时错判） */
+  function isoLocal(d){
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function formatDateShort(s){
+    const today = new Date();
+    const yest  = new Date(today); yest.setDate(today.getDate() - 1);
+    if(s === isoLocal(today)) return '今天';
+    if(s === isoLocal(yest))  return '昨天';
+    return s.slice(5);
+  }
+  document.getElementById('calPrev').addEventListener('click', () => {
+    calMonth--; if(calMonth < 0){ calMonth = 11; calYear--; } renderCal();
+  });
+  document.getElementById('calNext').addEventListener('click', () => {
+    calMonth++; if(calMonth > 11){ calMonth = 0; calYear++; } renderCal();
+  });
+  startDateBtn.addEventListener('click', () => openCal('start'));
+  endDateBtn.addEventListener('click', () => openCal('end'));
+  document.addEventListener('click', e => {
+    if(!e.target.closest('.rec-date-picker')) calendarPop.classList.remove('open');
+  });
+
+  /* ---------- 日志推送：事件分类反馈 ---------- */
+  function pushEvent(kind){
+    const t = hm();
+    if(kind === 'fp'){                       // 外部指纹开锁
+      applyLockState(true);
+      lastUnlock = { text:'冯欢的指纹开门', when:'今天 ' + t };
+      showEvent('ok', '冯欢的指纹开门', now());
+      addRecord('unlock', '冯欢的指纹开门', 'fp');
+      bumpToday();
+    }
+    else if(kind === 'pw'){                  // 外部密码开锁
+      applyLockState(true);
+      lastUnlock = { text:'老妈的密码开门', when:'今天 ' + t };
+      showEvent('ok', '老妈的密码开门', now());
+      addRecord('unlock', '老妈的密码开门', 'pw');
+      bumpToday();
+    }
+    else if(kind === 'fail'){                // 失败类异常（不更新状态行）
+      shakeLock();
+      addRecord('fail', '指纹频繁解锁失败');
+    }
+    else if(kind === 'door'){                // 关锁 / 门已关（不更新状态行）
+      applyLockState(false);
+      addRecord('lock', '门已关', 'lock');
+      bumpLastLock(t);
+    }
+    else if(kind === 'bell'){                // 门铃（不更新状态行）
+      headIcon.classList.remove('ring'); void headIcon.offsetWidth;
+      headIcon.classList.add('ring');
+      setTimeout(()=> headIcon.classList.remove('ring'), 1200);
+      addRecord('bell', '门铃响了', 'bell');
+    }
+  }
+
+  /* ---------- 控件 ---------- */
+  document.querySelectorAll('[data-event]').forEach(b =>
+    b.addEventListener('click', () => pushEvent(b.dataset.event)));
+
+  document.getElementById('btnArm').addEventListener('click', function(){
+    armed = !armed;
+    armVal.textContent = armed ? '布防中' : '未布防';
+    armVal.className = 't-val ' + (armed ? 'ok' : 'mut');
+    armTile.classList.toggle('on', armed);
+    this.classList.toggle('on', armed);
+  });
+
+  document.getElementById('btnChild').addEventListener('click', function(){
+    childOn = !childOn;
+    childVal.textContent = childOn ? '已开启' : '未开启';
+    childVal.className = 't-val ' + (childOn ? 'ok' : 'mut');
+    childTile.classList.toggle('on', childOn);
+    this.classList.toggle('on', childOn);
+  });
+
+  document.getElementById('btnBatt').addEventListener('click', function(){
+    bigLow = !bigLow;
+    setBatt(battBig,   bigLow ? 6  : 14);
+    setBatt(battSmall, bigLow ? 30 : 79);
+    this.classList.toggle('on', bigLow);
+  });
+
+  showDefault();
+  setBatt(battBig, 14);
+  setBatt(battSmall, 79);
+</script>
+</body>
+</html>
